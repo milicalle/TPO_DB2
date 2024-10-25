@@ -253,29 +253,39 @@ def pois_cerca_de_hotel(hotel_nombre):
 
 
 # 6. Habitaciones disponibles en un rango de fechas
-def habitaciones_disponibles(fecha_inicio, fecha_fin):
-  # Convertir fechas a objetos datetime
+def habitaciones_disponibles(fecha_inicio, fecha_fin, id_hotel):
+    # Convertir fechas a objetos datetime
     fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d")
     fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d")
 
+    # Obtener reservas que interfieren con el rango de fechas solicitado
     reservas = reservas_collection.find({
-       "$or":[
+        "$or": [
             {"fecha_entrada": {"$gte": fecha_inicio.strftime("%Y-%m-%d"), "$lte": fecha_fin.strftime("%Y-%m-%d")}},
             {"fecha_salida": {"$gte": fecha_inicio.strftime("%Y-%m-%d"), "$lte": fecha_fin.strftime("%Y-%m-%d")}},
-            {"$and":[
-                {"fecha_entrada":{"$lte":fecha_inicio.strftime("%Y-%m-%d")}},
-                {"fecha_salida":{"$gte":fecha_fin.strftime("%Y-%m-%d")}}
-             ]}
+            {"$and": [
+                {"fecha_entrada": {"$lte": fecha_inicio.strftime("%Y-%m-%d")}},
+                {"fecha_salida": {"$gte": fecha_fin.strftime("%Y-%m-%d")}}
+            ]}
         ]
     })
+
+    # Obtener IDs de habitaciones ocupadas
     habitaciones_ocupadas = {reserva["id_habitacion"] for reserva in reservas}
+    
+    # Consultar habitaciones disponibles junto con sus hoteles
     query = """
-        MATCH (h:Habitacion) 
-        WHERE NOT h.id_habitacion IN $habitaciones_ocupadas
-        RETURN h
+        MATCH (h:Hotel)-[:TIENE]->(hab:Habitacion) 
+        WHERE NOT hab.id_habitacion IN $habitaciones_ocupadas AND h.id_hotel = $id_hotel
+        RETURN h.nombre AS hotel, hab.id_habitacion AS habitacion
     """
-    result = graph.run(query, habitaciones_ocupadas=list(habitaciones_ocupadas))
-    return result.data()
+    
+    # Ejecutar la consulta
+    result = graph.run(query, habitaciones_ocupadas=list(habitaciones_ocupadas), id_hotel=id_hotel)
+
+    # Retornar los resultados como una lista de tuplas
+    return [(record["hotel"], record["habitacion"]) for record in result.data()]
+
 
 
 
