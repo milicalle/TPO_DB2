@@ -9,7 +9,7 @@ graph = Graph("bolt://neo4j:12345678@localhost:7687")
 client = MongoClient('mongodb://localhost:27017/')
 db = client['hotel_db']
 reservas_collection = db['reservas']
-#mili cambio
+#mili cambio2
 def gestionar_entidad():
     while True:
         print("Seleccione la operación que desea realizar:")
